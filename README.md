@@ -8,37 +8,85 @@ Trois implémentations REST doivent être créées :
 ## Environnement technique recommandé
 <img width="407" height="226" alt="image" src="https://github.com/user-attachments/assets/5425632a-6ec6-4e1c-ba47-6797bea0d644" />
 
-## Scénarios de test JMeter
-### READ-heavy (relation incluse)
-* 50% GET /items?page=&size=50
-* 20% GET /items?categoryId=...&page=&size=
-* 20% GET /categories/{id}/items?page=&size=
-* 10% GET /categories?page=&size=
-* Concurrence : 50 → 100 → 200 threads, ramp-up 60 s, 10 min/palier
-### JOIN-filter ciblé
-* 70% GET /items?categoryId=...&page=&size=
-* 30% GET /items/{id}
-* 60 → 120 threads, 8 min/palier, 60 s ramp-up
-### MIXED (écritures sur deux entités)
-* 40% GET /items?page=...
-* 20% POST /items (1 KB)
-* 10% PUT /items/{id} (1 KB)
-* 10% DELETE /items/{id}
-* 10% POST /categories (0.5–1 KB)
-* 10% PUT /categories/{id}
-* 50 → 100 threads, 10 min/palier
-### HEAVY-body (payload 5 KB)
-* 50% POST /items (5 KB)
-* 50% PUT /items/{id} (5 KB)
-* 30 → 60 threads, 8 min/palier
-### Bonnes pratiques JMeter
-* CSV Data Set Config pour ids existants (categories & items) et payloads variés.
-* HTTP Request Defaults pour l’URL de la variante testée.
-* Backend Listener → InfluxDB v2 (bucket jmeter, org perf).
-* Listeners lourds désactivés pendant les runs.
+## Plan de Tests JMeter
 
-## Auteur
-* Nom : BEN-LAGHFIRI Majeda
-* Cours: Architecture Microservices : Conception, Déploiement et Orchestration
-* Date : Janvier 2026
-* Encadré par : Pr.Mohamed LACHGAR
+### 1. Scénario READ-heavy (avec relations)
+**Objectif** : Évaluer les performances en lecture intensive avec jointures.
+
+**Répartition des requêtes** :
+- 50% – Liste paginée des items : `GET /items?page={page}&size=50`
+- 20% – Filtrage par catégorie : `GET /items?categoryId={id}&page={page}&size={size}`
+- 20% – Items par catégorie : `GET /categories/{id}/items?page={page}&size={size}`
+- 10% – Liste des catégories : `GET /categories?page={page}&size={size}`
+
+**Profil de charge** :
+- Utilisateurs simultanés : 50 → 100 → 200
+- Durée : 10 minutes par palier
+- Montée en charge : 60 secondes
+
+---
+
+### 2. Scénario JOIN-filter ciblé
+**Objectif** : Tester les requêtes avec jointures et filtres spécifiques.
+
+**Répartition des requêtes** :
+- 70% – Filtrage par catégorie : `GET /items?categoryId={id}&page={page}&size={size}`
+- 30% – Consultation d’un item : `GET /items/{id}`
+
+**Profil de charge** :
+- Utilisateurs simultanés : 60 → 120
+- Durée : 8 minutes par palier
+- Montée en charge : 60 secondes
+
+---
+
+### 3. Scénario MIXED (lectures et écritures)
+**Objectif** : Simuler une charge mixte sur les entités Items et Categories.
+
+**Répartition des requêtes** :
+- 40% – Liste paginée des items : `GET /items?page={page}&size={size}`
+- 20% – Création d’item : `POST /items` (payload ~1 Ko)
+- 10% – Mise à jour d’item : `PUT /items/{id}` (payload ~1 Ko)
+- 10% – Suppression d’item : `DELETE /items/{id}`
+- 10% – Création de catégorie : `POST /categories` (payload 0,5–1 Ko)
+- 10% – Mise à jour de catégorie : `PUT /categories/{id}`
+
+**Profil de charge** :
+- Utilisateurs simultanés : 50 → 100
+- Durée : 10 minutes par palier
+- Montée en charge : progressive
+
+---
+
+### 4. Scénario HEAVY-body (payload volumineux)
+**Objectif** : Évaluer le traitement des requêtes avec corps de requête lourds.
+
+**Répartition des requêtes** :
+- 50% – Création d’item : `POST /items` (payload 5 Ko)
+- 50% – Mise à jour d’item : `PUT /items/{id}` (payload 5 Ko)
+
+**Profil de charge** :
+- Utilisateurs simultanés : 30 → 60
+- Durée : 8 minutes par palier
+- Montée en charge : progressive
+
+---
+
+### 5. Configuration JMeter et bonnes pratiques
+
+**Préparation des données** :
+- Utilisation de *CSV Data Set Config* pour les identifiants existants (catégories et items) et les payloads variés.
+
+**Configuration commune** :
+- *HTTP Request Defaults* pour définir l’URL de l’environnement testé.
+
+**Monitoring et export** :
+- *Backend Listener* configuré vers InfluxDB v2 (bucket : `jmeter`, organisation : `perf`) pour la collecte des métriques.
+- Désactivation des listeners graphiques pendant l’exécution pour réduire l’impact sur les performances.
+
+---
+
+**Auteur** : Ettouyjer yasmine
+**Contexte** : Cours *Architecture Microservices – Conception, Déploiement et Orchestration*  
+**Date** : Janvier 2026  
+**Encadrement** : Pr. Mohamed LACHGAR
